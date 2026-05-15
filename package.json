@@ -1,0 +1,17 @@
+{
+  "name": "church-saas",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev --prefix api\" \"npm run dev --prefix web\"",
+    "dev:api": "npm run dev --prefix api",
+    "dev:web": "npm run dev --prefix web",
+    "dev:mobile": "npm run dev --prefix mobile",
+    "install:all": "npm i --prefix api && npm i --prefix web && npm i --prefix mobile",
+    "db:migrate": "npm run db:migrate --prefix api",
+    "db:seed": "npm run db:seed --prefix api"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

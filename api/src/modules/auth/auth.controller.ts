@@ -1,0 +1,80 @@
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { AuthService } from './auth.service';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import { RefreshDto } from './dto/refresh.dto';
+import { SendOtpDto } from './dto/send-otp.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+
+@ApiTags('Auth')
+@Controller('auth')
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Post('register')
+  register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
+  }
+
+  @Post('send-otp')
+  @HttpCode(HttpStatus.OK)
+  sendOtp(@Body() dto: SendOtpDto) {
+    return this.authService.resendOtp(dto.email);
+  }
+
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  verifyOtp(@Body() dto: VerifyOtpDto) {
+    return this.authService.verifyOtp(dto);
+  }
+
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  login(@Body() dto: LoginDto) {
+    return this.authService.login(dto);
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  refresh(@Body() dto: RefreshDto) {
+    return this.authService.refreshTokens(dto.userId, dto.refreshToken);
+  }
+
+  // ── Branch Pastor phone-OTP endpoints ────────────────────────────────────────
+
+  @Post('login-pastor')
+  @HttpCode(HttpStatus.OK)
+  loginPastor(@Body() body: { phone: string }) {
+    return this.authService.loginWithPhone(body.phone);
+  }
+
+  @Post('verify-pastor-otp')
+  @HttpCode(HttpStatus.OK)
+  verifyPastorOtp(@Body() body: { phone: string; code: string }) {
+    return this.authService.verifyPhoneOtp(body);
+  }
+
+  @Post('resend-pastor-otp')
+  @HttpCode(HttpStatus.OK)
+  resendPastorOtp(@Body() body: { phone: string }) {
+    return this.authService.resendPhoneOtp(body.phone);
+  }
+
+  @Post('logout')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  logout(@CurrentUser() user: { id: string }) {
+    return this.authService.logout(user.id);
+  }
+}
