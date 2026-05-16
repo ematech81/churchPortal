@@ -59,6 +59,16 @@ export class MembersController {
     return this.membersService.count(churchId, status);
   }
 
+  /**
+   * One-time data fix: finds members whose churchRole is pastoral
+   * but whose status was never synced to 'pastor'. Updates them all.
+   * Safe to call multiple times.
+   */
+  @Post('sync-pastoral')
+  syncPastoral(@ChurchId() churchId: string) {
+    return this.membersService.syncPastoralRecords(churchId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @ChurchId() churchId: string) {
     return this.membersService.findByIdOrFail(id, churchId);

@@ -25,7 +25,7 @@ const BAPTISM_API: Record<string, string> = { 'None': 'none', 'Water Baptism': '
 const MEMBERSHIP_CATEGORIES = ['New Member', 'Existing / Old Member', 'Pastor Registration', 'Youth Member', 'Children Member', 'Family Registration'];
 const CATEGORY_API: Record<string, string> = {
   'New Member': 'new_member', 'Existing / Old Member': 'existing_member',
-  'Pastor Registration': 'existing_member',
+  'Pastor Registration': 'pastor_registration',
   'Youth Member': 'youth_member', 'Children Member': 'children_member',
   'Family Registration': 'family_registration',
 };

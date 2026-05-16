@@ -63,6 +63,7 @@ export enum SubscriptionStatus {
 export enum MembershipCategory {
   NEW_MEMBER = 'new_member',
   EXISTING_MEMBER = 'existing_member',
+  PASTOR_REGISTRATION = 'pastor_registration',
   YOUTH_MEMBER = 'youth_member',
   CHILDREN_MEMBER = 'children_member',
   FAMILY_REGISTRATION = 'family_registration',

@@ -1,14 +1,6 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import Constants from 'expo-constants';
-
-function getBaseUrl(): string {
-  if (__DEV__) {
-    const host = (Constants.expoConfig as any)?.hostUri?.split(':')[0];
-    if (host) return `http://${host}:3000/v1`;
-  }
-  return process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/v1';
-}
+import { API_BASE_URL } from '../constants/config';
 
 function decodeJwtPayload(token: string): { sub?: string } | null {
   try {
@@ -18,7 +10,7 @@ function decodeJwtPayload(token: string): { sub?: string } | null {
   }
 }
 
-export const api = axios.create({ baseURL: getBaseUrl() });
+export const api = axios.create({ baseURL: API_BASE_URL });
 
 api.interceptors.request.use(async (config) => {
   const token = await SecureStore.getItemAsync('accessToken');
@@ -33,12 +25,12 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !config._retry) {
       config._retry = true;
       const storedRefresh = await SecureStore.getItemAsync('refreshToken');
-      const storedAccess = await SecureStore.getItemAsync('accessToken');
+      const storedAccess  = await SecureStore.getItemAsync('accessToken');
       if (storedRefresh && storedAccess) {
         const payload = decodeJwtPayload(storedAccess);
         if (payload?.sub) {
           try {
-            const res = await axios.post(`${getBaseUrl()}/auth/refresh`, {
+            const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {
               userId: payload.sub,
               refreshToken: storedRefresh,
             });

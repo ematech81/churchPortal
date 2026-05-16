@@ -87,4 +87,19 @@ export class ChurchesController {
     if (!body.branchId) throw new BadRequestException('branchId is required.');
     return this.churchesService.assignPastorToBranch(user.churchId, pastorId, body.branchId);
   }
+
+  /**
+   * Promotes a Member (registered via member form) to a Branch Pastor User account.
+   * This creates/updates a User entity so the pastor can log in via phone OTP.
+   */
+  @Post('pastors/promote-member')
+  promoteMemberToBranchPastor(
+    @CurrentUser() user: { churchId: string | null },
+    @Body() body: { memberId: string; branchId: string },
+  ) {
+    if (!user.churchId) throw new BadRequestException('No church associated with this account.');
+    if (!body.memberId) throw new BadRequestException('memberId is required.');
+    if (!body.branchId) throw new BadRequestException('branchId is required.');
+    return this.churchesService.promoteMemberToBranchPastor(user.churchId, body.memberId, body.branchId);
+  }
 }

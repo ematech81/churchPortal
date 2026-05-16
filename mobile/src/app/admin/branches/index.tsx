@@ -1,7 +1,7 @@
 import {
   View, Text, TouchableOpacity, FlatList, StyleSheet,
   StatusBar, ActivityIndicator, RefreshControl, Alert, Modal,
-  TextInput, ScrollView,
+  TextInput, ScrollView, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useState, useCallback, useMemo } from 'react';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -492,6 +492,11 @@ export default function BranchesScreen() {
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Branch | null>(null);
   const [showEdit, setShowEdit] = useState(false);
+  const [showFilter, setShowFilter] = useState(false);
+  const [filterCity, setFilterCity] = useState('');
+  const [filterPastor, setFilterPastor] = useState<'all' | 'assigned' | 'unassigned'>('all');
+  const [filterSort, setFilterSort] = useState<'name' | 'members' | 'date'>('name');
+  const activeFilterCount = [filterCity, filterPastor !== 'all' ? '1' : ''].filter(Boolean).length;
 
   const fetchAll = useCallback(async () => {
     try {
@@ -512,12 +517,29 @@ export default function BranchesScreen() {
     [branches],
   );
 
-  const filtered = useMemo(() =>
-    search.trim()
-      ? branches.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()) || (b.city ?? '').toLowerCase().includes(search.toLowerCase()))
-      : branches,
-    [branches, search],
-  );
+  const filtered = useMemo(() => {
+    let list = [...branches];
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((b) =>
+        b.name.toLowerCase().includes(q) ||
+        (b.city ?? '').toLowerCase().includes(q) ||
+        (b.pastor ? `${b.pastor.firstName} ${b.pastor.lastName}`.toLowerCase().includes(q) : false),
+      );
+    }
+    if (filterCity.trim()) {
+      const c = filterCity.toLowerCase();
+      list = list.filter((b) => (b.city ?? '').toLowerCase().includes(c));
+    }
+    if (filterPastor === 'assigned')   list = list.filter((b) => !!b.pastor);
+    if (filterPastor === 'unassigned') list = list.filter((b) => !b.pastor);
+    list.sort((a, b) => {
+      if (filterSort === 'members') return b.memberCount - a.memberCount;
+      if (filterSort === 'date')    return 0; // createdAt not returned, keep order
+      return a.name.localeCompare(b.name);
+    });
+    return list;
+  }, [branches, search, filterCity, filterPastor, filterSort]);
 
   const handleEdit = async (branch: Branch, data: any) => {
     await api.patch(`/churches/branch/${branch.id}`, data);
@@ -591,9 +613,12 @@ export default function BranchesScreen() {
                 placeholderTextColor={C.textGray}
               />
             </View>
-            <View style={s.filterBtn}>
+            <TouchableOpacity style={s.filterBtn} onPress={() => setShowFilter(true)} activeOpacity={0.8}>
               <Ionicons name="options" size={20} color={C.white} />
-            </View>
+              {activeFilterCount > 0 && (
+                <View style={s.filterBadge}><Text style={s.filterBadgeText}>{activeFilterCount}</Text></View>
+              )}
+            </TouchableOpacity>
           </View>
 
           <FlatList
@@ -665,6 +690,75 @@ export default function BranchesScreen() {
         onClose={() => setShowEdit(false)}
         onSave={(data) => handleEdit(editing!, data)}
       />
+
+      {/* ── Filter Modal ── */}
+      <Modal visible={showFilter} transparent animationType="slide" onRequestClose={() => setShowFilter(false)}>
+        <TouchableOpacity style={fm.overlay} activeOpacity={1} onPress={() => setShowFilter(false)}>
+          <View style={fm.sheet}>
+            <View style={fm.handle} />
+            <View style={fm.sheetHeader}>
+              <Text style={fm.sheetTitle}>Filter Branches</Text>
+              <TouchableOpacity onPress={() => { setFilterCity(''); setFilterPastor('all'); setFilterSort('name'); }}>
+                <Text style={fm.clearText}>Clear All</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Location filter */}
+            <Text style={fm.label}>Filter by City / Location</Text>
+            <View style={fm.inputWrap}>
+              <Ionicons name="location-outline" size={16} color={C.textGray} />
+              <TextInput
+                style={fm.input}
+                value={filterCity}
+                onChangeText={setFilterCity}
+                placeholder="e.g. Lagos, Abuja..."
+                placeholderTextColor={C.textGray}
+              />
+              {filterCity ? (
+                <TouchableOpacity onPress={() => setFilterCity('')}>
+                  <Ionicons name="close-circle" size={16} color={C.textGray} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {/* Pastor assignment filter */}
+            <Text style={fm.label}>Assigned Pastor</Text>
+            <View style={fm.chipRow}>
+              {([['all', 'All Branches'], ['assigned', 'Has Pastor'], ['unassigned', 'No Pastor']] as const).map(([key, label]) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[fm.chip, filterPastor === key && fm.chipActive]}
+                  onPress={() => setFilterPastor(key)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[fm.chipText, filterPastor === key && fm.chipTextActive]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Sort */}
+            <Text style={fm.label}>Sort By</Text>
+            <View style={fm.chipRow}>
+              {([['name', 'Branch Name'], ['members', 'Most Members'], ['date', 'Date Added']] as const).map(([key, label]) => (
+                <TouchableOpacity
+                  key={key}
+                  style={[fm.chip, filterSort === key && fm.chipActive]}
+                  onPress={() => setFilterSort(key)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[fm.chipText, filterSort === key && fm.chipTextActive]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity style={fm.applyBtn} onPress={() => setShowFilter(false)} activeOpacity={0.85}>
+              <Text style={fm.applyBtnText}>
+                Apply Filters {filtered.length > 0 ? `· ${filtered.length} results` : ''}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -683,7 +777,9 @@ const s = StyleSheet.create({
   searchWrap: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.bg },
   searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.white, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
   searchInput: { flex: 1, fontSize: 14, color: C.textDark },
-  filterBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: C.dark, alignItems: 'center', justifyContent: 'center' },
+  filterBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: C.dark, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  filterBadge: { position: 'absolute', top: 6, right: 6, width: 14, height: 14, borderRadius: 7, backgroundColor: C.accent, alignItems: 'center', justifyContent: 'center' },
+  filterBadgeText: { fontSize: 8, fontWeight: '800', color: C.dark },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   empty: { alignItems: 'center', gap: 8, paddingTop: 60 },
   emptyTitle: { fontSize: 17, fontWeight: '700', color: C.textDark },
@@ -802,4 +898,24 @@ const an = StyleSheet.create({
   perfStable: { fontSize: 10, color: C.textGray, fontWeight: '600', marginTop: 3 },
   reportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: C.accent, borderRadius: 14, paddingVertical: 16, shadowColor: C.accent, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   reportBtnText: { fontSize: 14, fontWeight: '800', color: C.dark, letterSpacing: 0.6 },
+});
+
+// Filter modal styles
+const fm = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: C.white, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
+  handle: { width: 40, height: 4, backgroundColor: C.border, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  sheetTitle: { fontSize: 18, fontWeight: '800', color: C.textDark },
+  clearText: { fontSize: 14, fontWeight: '700', color: C.error },
+  label: { fontSize: 12, fontWeight: '800', color: C.textDark, letterSpacing: 0.5, marginBottom: 10, marginTop: 16 },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11 },
+  input: { flex: 1, fontSize: 14, color: C.textDark },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: C.bg, borderWidth: 1.5, borderColor: C.border },
+  chipActive: { backgroundColor: C.dark, borderColor: C.dark },
+  chipText: { fontSize: 13, fontWeight: '600', color: C.textGray },
+  chipTextActive: { color: C.accent },
+  applyBtn: { backgroundColor: C.accent, borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginTop: 24 },
+  applyBtnText: { fontSize: 15, fontWeight: '800', color: C.dark },
 });

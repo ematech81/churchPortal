@@ -3,13 +3,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Member } from '../members/member.entity';
 import { Church } from '../churches/church.entity';
+import { MembersService } from '../members/members.service';
 import { MemberStatus, ChurchRole, UserRole } from '@/types';
 
 @Injectable()
 export class DashboardService {
   constructor(
     @InjectRepository(Member) private readonly memberRepo: Repository<Member>,
-    @InjectRepository(Church) private readonly churchRepo: Repository<Church>,
+    @InjectRepository(Church)  private readonly churchRepo:  Repository<Church>,
+    private readonly membersService: MembersService,
   ) {}
 
   async getStats(churchId: string, role: string) {
@@ -34,12 +36,8 @@ export class DashboardService {
       this.memberRepo.count({ where: { churchId, status: MemberStatus.FIRST_TIMER } }),
       this.memberRepo.count({ where: { churchId, status: MemberStatus.NEW_CONVERT } }),
 
-      this.memberRepo.count({
-        where: [
-          { churchId, churchRole: ChurchRole.PASTOR },
-          { churchId, churchRole: ChurchRole.BRANCH_PASTOR },
-        ],
-      }),
+      // Unified pastor count: status='pastor'/'minister' OR churchRole='pastor'/'branch_pastor'
+      this.membersService.countPastors(churchId),
 
       this.memberRepo
         .createQueryBuilder('m')

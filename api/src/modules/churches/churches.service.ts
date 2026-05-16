@@ -163,6 +163,75 @@ export class ChurchesService {
     return { success: true, branchName: branch?.name };
   }
 
+  /**
+   * Promotes a Member-source pastor to a real Branch Pastor User account.
+   * This is what enables phone OTP login for member-registered pastors.
+   *
+   * Flow:
+   *  1. Validate branch belongs to this church
+   *  2. Load the Member record
+   *  3. Find or create a User with BRANCH_PASTOR role using the member's phone
+   *  4. Update the Member's status and churchId to match
+   */
+  async promoteMemberToBranchPastor(parentChurchId: string, memberId: string, branchId: string) {
+    // Verify branch
+    const branchIds = await this.getBranchIds(parentChurchId);
+    if (!branchIds.includes(branchId)) throw new NotFoundException('Branch not found');
+
+    const branch = await this.repo.findOneOrFail({ where: { id: branchId } });
+
+    // Load member
+    const member = await this.memberRepo.findOne({ where: { id: memberId } });
+    if (!member) throw new NotFoundException('Member not found');
+    if (!member.phone) {
+      throw new BadRequestException(
+        'This pastor has no phone number on file. A phone number is required for Branch Pastor login access.',
+      );
+    }
+
+    // Find or create a User account with this phone number
+    const existing = await this.userRepo.findOne({ where: { phone: member.phone } });
+    let userId: string;
+
+    if (existing) {
+      // Update existing user to branch pastor
+      await this.userRepo.update(existing.id, {
+        role: UserRole.BRANCH_PASTOR,
+        churchId: branchId,
+        firstName: existing.firstName || member.firstName,
+        lastName:  existing.lastName  || member.lastName,
+      } as any);
+      userId = existing.id;
+    } else {
+      // Create a new User account — this enables phone OTP login
+      const newUser = this.userRepo.create({
+        firstName: member.firstName,
+        lastName:  member.lastName,
+        phone:     member.phone,
+        role:      UserRole.BRANCH_PASTOR,
+        churchId:  branchId,
+      } as any);
+      if (member.email) (newUser as any).email = member.email;
+      (newUser as any).isEmailVerified = true;
+      const saved = (await this.userRepo.save(newUser)) as unknown as User;
+      userId = saved.id;
+    }
+
+    // Sync member record to reflect the promotion
+    await this.memberRepo.update(memberId, {
+      churchId:  branchId,
+      status:    'pastor' as any,
+      churchRole:'branch_pastor' as any,
+    });
+
+    return {
+      success: true,
+      userId,
+      branchName: branch.name,
+      message: `${member.firstName} ${member.lastName} can now log in as Branch Pastor of ${branch.name} using their phone number.`,
+    };
+  }
+
   async getBranchIds(parentChurchId: string): Promise<string[]> {
     const branches = await this.repo.find({ where: { parentChurchId } });
     return [parentChurchId, ...branches.map((b) => b.id)];

@@ -146,17 +146,29 @@ function BranchPastorLoginForm() {
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState('');
 
+  const [errorTitle,  setErrorTitle]  = useState('');
+  const [errorDetail, setErrorDetail] = useState('');
+
   const handleSendCode = async () => {
     const trimmed = phone.trim();
     if (!trimmed) { setServerError('Please enter your phone number.'); return; }
     setLoading(true);
     setServerError('');
+    setErrorTitle('');
+    setErrorDetail('');
     try {
       await api.post('/auth/login-pastor', { phone: trimmed });
       router.push({ pathname: '/(auth)/verify', params: { phone: trimmed, mode: 'pastor' } });
     } catch (err: any) {
-      const msg = err.response?.data?.message;
-      setServerError(Array.isArray(msg) ? msg[0] : (msg ?? 'Could not send code. Check your phone number.'));
+      const data = err.response?.data;
+      // New structured error format
+      if (data?.message && data?.detail) {
+        setErrorTitle(data.message);
+        setErrorDetail(data.detail);
+      } else {
+        const msg = data?.message;
+        setServerError(Array.isArray(msg) ? msg[0] : (msg ?? 'Could not send code. Check your phone number.'));
+      }
     } finally {
       setLoading(false);
     }
@@ -189,7 +201,16 @@ function BranchPastorLoginForm() {
         />
       </View>
 
-      {serverError ? (
+      {/* Structured access-denied error (new format) */}
+      {errorTitle ? (
+        <View style={s.accessDeniedBox}>
+          <View style={s.accessDeniedHeader}>
+            <Ionicons name="shield-checkmark" size={20} color={C.error} />
+            <Text style={s.accessDeniedTitle}>{errorTitle}</Text>
+          </View>
+          <Text style={s.accessDeniedDetail}>{errorDetail}</Text>
+        </View>
+      ) : serverError ? (
         <View style={s.serverError}>
           <Ionicons name="alert-circle-outline" size={16} color={C.error} />
           <Text style={s.serverErrorText}>{serverError}</Text>
@@ -230,7 +251,7 @@ export default function LoginScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: C.dark }}>
       <StatusBar barStyle="light-content" backgroundColor={C.dark} />
-      <SafeAreaView edges={['top']} style={{ backgroundColor: C.dark }}>tdg
+      <SafeAreaView edges={['top']} style={{ backgroundColor: C.dark }}>
         <View style={s.logoSection}>
           <View style={s.logoCircle}>
             <Ionicons name="shield-checkmark" size={40} color={C.dark} />
@@ -333,6 +354,10 @@ const s = StyleSheet.create({
   errorText: { fontSize: 12, color: C.error, marginTop: 4, marginLeft: 4 },
   serverError: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEF2F2', borderRadius: 10, padding: 12, marginBottom: 8 },
   serverErrorText: { fontSize: 13, color: C.error, flex: 1 },
+  accessDeniedBox: { backgroundColor: '#FEF2F2', borderRadius: 14, padding: 16, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: C.error },
+  accessDeniedHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  accessDeniedTitle: { fontSize: 16, fontWeight: '800', color: C.error },
+  accessDeniedDetail: { fontSize: 14, color: '#7F1D1D', lineHeight: 21 },
 
   // Login button
   loginBtn: { backgroundColor: C.accent, borderRadius: 14, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', marginTop: 8, shadowColor: C.accent, shadowOpacity: 0.35, shadowRadius: 10, elevation: 4 },

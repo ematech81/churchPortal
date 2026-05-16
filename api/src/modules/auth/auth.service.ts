@@ -145,19 +145,28 @@ export class AuthService {
   async loginWithPhone(phone: string) {
     const user = await this.usersService.findByPhone(phone);
     if (!user) {
-      throw new NotFoundException(
-        'No account found with this phone number. Contact your Senior Pastor.',
-      );
+      throw new NotFoundException({
+        message: 'Access Denied!',
+        detail:
+          'Either you entered an incorrect phone number or you have not yet been assigned a Branch Pastor role. Kindly contact your Senior Pastor for assistance.',
+        code: 'PHONE_NOT_FOUND',
+      });
     }
     if (user.role !== UserRole.BRANCH_PASTOR) {
-      throw new ForbiddenException(
-        'This login is for Branch Pastors only. Please use the Admin login with your email address.',
-      );
+      throw new ForbiddenException({
+        message: 'Access Denied!',
+        detail:
+          'This login is for Branch Pastors only. Please use the Admin login with your email address.',
+        code: 'WRONG_LOGIN_TYPE',
+      });
     }
     if (!user.churchId) {
-      throw new ForbiddenException(
-        'No branch has been assigned to your account yet. Contact your Senior Pastor.',
-      );
+      throw new ForbiddenException({
+        message: 'Access Denied!',
+        detail:
+          'Your account has not yet been assigned to a branch. Kindly contact your Senior Pastor for assistance.',
+        code: 'NO_BRANCH_ASSIGNED',
+      });
     }
     await this._dispatchPhoneOtp(user.id, phone);
     return { message: 'A 6-digit verification code has been sent to your phone.', phone };

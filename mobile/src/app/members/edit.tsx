@@ -38,7 +38,7 @@ const AGE_LABEL: Record<string, string> = { '0-5': '0–5', '6-12': '6–12', '1
 // display label → API value maps
 const STATUS_API: Record<string, string> = { 'First Timer': 'first_timer', 'New Convert': 'new_convert', 'Member': 'member', 'Worker': 'worker', 'Minister': 'minister', 'Pastor': 'pastor', 'Visitor': 'visitor', 'Backslidden': 'backslidden' };
 const BAPTISM_API: Record<string, string> = { 'None': 'none', 'Water Baptism': 'water', 'Holy Spirit': 'holy_spirit', 'Both': 'both' };
-const CATEGORY_API: Record<string, string> = { 'New Member': 'new_member', 'Existing / Old Member': 'existing_member', 'Youth Member': 'youth_member', 'Children Member': 'children_member', 'Family Registration': 'family_registration' };
+const CATEGORY_API: Record<string, string> = { 'New Member': 'new_member', 'Existing / Old Member': 'existing_member', 'Pastor Registration': 'pastor_registration', 'Youth Member': 'youth_member', 'Children Member': 'children_member', 'Family Registration': 'family_registration' };
 const ROLE_API: Record<string, string> = { 'Branch Pastor': 'branch_pastor', 'Pastor': 'pastor', 'Departmental Leader': 'departmental_leader', 'Worker': 'worker', 'Member': 'member', 'Deacon / Deaconess': 'deacon', 'Elder': 'elder', 'Other': 'other' };
 const PASTORAL_API: Record<string, string> = { 'Youth Pastor': 'youth_pastor', 'Associate Pastor': 'associate_pastor', 'Assistant Pastor': 'assistant_pastor', 'Prayer Pastor': 'prayer_pastor', 'Evangelism Pastor': 'evangelism_pastor' };
 const AGE_API: Record<string, string> = { '0–5': '0-5', '6–12': '6-12', '13–17': '13-17' };

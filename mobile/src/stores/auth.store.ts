@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
-import Constants from 'expo-constants';
+import { API_BASE_URL } from '../constants/config';
 
 export interface AuthUser {
   id: string;
@@ -26,13 +26,6 @@ interface AuthStore {
   hydrate: () => Promise<void>;
 }
 
-function getBaseUrl(): string {
-  if (__DEV__) {
-    const host = (Constants.expoConfig as any)?.hostUri?.split(':')[0];
-    if (host) return `http://${host}:3000/v1`;
-  }
-  return process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/v1';
-}
 
 function decodePayload(token: string): { sub?: string; exp?: number } | null {
   try {
@@ -122,7 +115,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
       // Try to refresh using the stored refresh token
       if (refreshToken && payload.sub) {
         try {
-          const res = await axios.post(`${getBaseUrl()}/auth/refresh`, {
+          const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {
             userId: payload.sub,
             refreshToken,
           });
