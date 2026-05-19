@@ -55,4 +55,38 @@ export class UsersService {
   async setChurchAndRole(userId: string, churchId: string, role: UserRole) {
     await this.repo.update(userId, { churchId, role });
   }
+
+  findByIdWithPin(id: string) {
+    return this.repo
+      .createQueryBuilder('u')
+      .addSelect('u.pinHash')
+      .where('u.id = :id', { id })
+      .getOne();
+  }
+
+  async setPin(userId: string, pinHash: string) {
+    await this.repo.update(userId, {
+      pinHash,
+      hasPin: true,
+      pinFailedAttempts: 0,
+      pinLockedUntil: null,
+    } as any);
+  }
+
+  async incrementPinAttempts(userId: string, current: number) {
+    const next = current + 1;
+    const update: any = { pinFailedAttempts: next };
+    if (next >= 5) {
+      update.pinLockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+    }
+    await this.repo.update(userId, update);
+    return next;
+  }
+
+  async resetPinAttempts(userId: string) {
+    await this.repo.update(userId, {
+      pinFailedAttempts: 0,
+      pinLockedUntil: null,
+    } as any);
+  }
 }

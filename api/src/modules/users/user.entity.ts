@@ -43,4 +43,16 @@ export class User extends BaseEntity {
 
   @Column({ type: 'varchar', nullable: true })
   avatarUrl: string | null;
+
+  @Column({ default: false })
+  hasPin: boolean;
+
+  @Column({ type: 'varchar', nullable: true, select: false })
+  pinHash: string | null;
+
+  @Column({ default: 0 })
+  pinFailedAttempts: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  pinLockedUntil: Date | null;
 }

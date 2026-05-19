@@ -1,5 +1,5 @@
 // ─── Change this IP whenever your machine's network address changes ───────────
-const DEV_IP = '10.223.196.155';
+const DEV_IP = '10.204.218.155';
 
 export const API_BASE_URL = __DEV__
   ? `http://${DEV_IP}:3000/v1`

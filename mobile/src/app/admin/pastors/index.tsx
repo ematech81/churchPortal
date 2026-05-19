@@ -138,7 +138,7 @@ export default function PastorsScreen() {
       const [uRes, bRes, mRes] = await Promise.all([
         api.get('/churches/pastors'),
         api.get('/churches/branches'),
-        api.get('/members', { params: { status: 'pastoral', limit: 500 } }),
+        api.get('/members', { params: { status: 'pastor', limit: 500 } }),
       ]);
       setUserPastors((uRes.data ?? []).map((u: any) => ({ ...u, _source: 'user' })));
       setBranches(bRes.data ?? []);

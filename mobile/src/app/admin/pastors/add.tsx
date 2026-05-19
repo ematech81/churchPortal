@@ -121,7 +121,7 @@ export default function AddPastorScreen() {
   const [dob,       setDob]       = useState('');
 
   // Ministry fields
-  const [role,          setRole]          = useState('Pastor');
+  const [role,          setRole]          = useState('');
   const [branchId,      setBranchId]      = useState('');
   const [branchLabel,   setBranchLabel]   = useState('');
   const [department,    setDepartment]    = useState('');
@@ -198,7 +198,7 @@ export default function AddPastorScreen() {
     maritalStatus: MARITAL_API[marital] || undefined,
     status: 'pastor',
     membershipCategory: 'pastor_registration',
-    churchRole: ROLE_API[role]      || 'pastor',
+    churchRole: ROLE_API[role]      ?? undefined,
     pastoralPosition: POSITION_API[position] || undefined,
     departmentName: department.trim() || undefined,
     address:   address.trim()  || undefined,
@@ -224,6 +224,10 @@ export default function AddPastorScreen() {
   const handleSave = async () => {
     if (!firstName.trim() || !lastName.trim() || !phone.trim()) {
       Alert.alert('Required', 'First name, last name and phone are required.');
+      return;
+    }
+    if (!role) {
+      Alert.alert('Required', 'Please select a Pastoral Role before saving.');
       return;
     }
     setSaving(true);

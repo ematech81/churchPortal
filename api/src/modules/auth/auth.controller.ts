@@ -13,6 +13,9 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { CreatePinDto } from './dto/create-pin.dto';
+import { VerifyPinDto } from './dto/verify-pin.dto';
+import { ResetPinDto } from './dto/reset-pin.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
@@ -76,5 +79,31 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   logout(@CurrentUser() user: { id: string }) {
     return this.authService.logout(user.id);
+  }
+
+  // ── PIN endpoints (pastors only) ─────────────────────────────────────────────
+
+  @Post('pin/create')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  createPin(@CurrentUser() user: { id: string }, @Body() dto: CreatePinDto) {
+    return this.authService.createPin(user.id, dto);
+  }
+
+  @Post('pin/verify')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  verifyPin(@CurrentUser() user: { id: string }, @Body() dto: VerifyPinDto) {
+    return this.authService.verifyPin(user.id, dto.pin);
+  }
+
+  @Post('pin/reset')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  resetPin(@CurrentUser() user: { id: string }, @Body() dto: ResetPinDto) {
+    return this.authService.resetPin(user.id, dto);
   }
 }

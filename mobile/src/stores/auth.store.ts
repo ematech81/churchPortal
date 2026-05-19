@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
 import { API_BASE_URL } from '../constants/config';
+import { clearPinSetupSkipped } from '../utils/pin-session';
 
 export interface AuthUser {
   id: string;
@@ -11,6 +12,7 @@ export interface AuthUser {
   phone: string | null;
   role: string;
   churchId: string | null;
+  hasPin: boolean;
 }
 
 interface AuthStore {
@@ -22,6 +24,7 @@ interface AuthStore {
   setAuth: (user: AuthUser, accessToken: string, refreshToken: string) => Promise<void>;
   updateTokens: (user: AuthUser, accessToken: string, refreshToken: string) => Promise<void>;
   setOnboardingDone: () => Promise<void>;
+  setHasPin: (value: boolean) => Promise<void>;
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
 }
@@ -74,7 +77,17 @@ export const useAuthStore = create<AuthStore>((set) => ({
     set({ onboardingDone: true });
   },
 
+  setHasPin: async (value) => {
+    set((state) => {
+      if (!state.user) return {};
+      const updated = { ...state.user, hasPin: value };
+      SecureStore.setItemAsync('user', JSON.stringify(updated));
+      return { user: updated };
+    });
+  },
+
   logout: async () => {
+    clearPinSetupSkipped();
     await Promise.all([
       SecureStore.deleteItemAsync('accessToken'),
       SecureStore.deleteItemAsync('refreshToken'),

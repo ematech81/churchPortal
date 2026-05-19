@@ -1,7 +1,7 @@
 import {
   Controller, Get, Post, Patch, Delete,
   Param, Body, Query, UseGuards, HttpCode, HttpStatus,
-  UseInterceptors, UploadedFile, Req, BadRequestException,
+  UseInterceptors, UploadedFile, Req, BadRequestException, ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -10,7 +10,11 @@ import { join } from 'path';
 import { mkdirSync } from 'fs';
 import { MembersService } from './members.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { ChurchId } from '../../common/decorators/church-id.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { UserRole } from '@/types';
 
 @ApiTags('Members')
 @ApiBearerAuth()
@@ -69,6 +73,20 @@ export class MembersController {
     return this.membersService.syncPastoralRecords(churchId);
   }
 
+  /**
+   * Finds members mis-tagged as 'pastor' via the general member form —
+   * i.e. no pastoral churchRole, no pastoralPosition, not registered via
+   * pastor_registration. Pass ?dryRun=false to apply the fix.
+   */
+  @Post('cleanup-mislabeled')
+  @ApiQuery({ name: 'dryRun', required: false })
+  cleanupMislabeled(
+    @ChurchId() churchId: string,
+    @Query('dryRun') dryRun?: string,
+  ) {
+    return this.membersService.cleanupMislabeled(churchId, dryRun !== 'false');
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @ChurchId() churchId: string) {
     return this.membersService.findByIdOrFail(id, churchId);
@@ -90,7 +108,13 @@ export class MembersController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string, @ChurchId() churchId: string) {
-    return this.membersService.softDelete(id, churchId);
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.SENIOR_PASTOR, UserRole.BRANCH_PASTOR)
+  remove(
+    @Param('id') id: string,
+    @ChurchId() churchId: string,
+    @CurrentUser() caller: { id: string; role: string },
+  ) {
+    return this.membersService.softDelete(id, churchId, { userId: caller.id, role: caller.role });
   }
 }

@@ -28,12 +28,12 @@ interface Member {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const FILTERS = [
-  { key: 'all',       label: 'All' },
-  { key: 'member',    label: 'Member' },
-  { key: 'worker',    label: 'Worker' },
-  { key: 'pastor',    label: 'Pastor' },
-  { key: 'minister',  label: 'Minister' },
-  { key: 'visitor',   label: 'Visitor' },
+  { key: 'all',         label: 'All' },
+  { key: 'member',      label: 'Member' },
+  { key: 'worker',      label: 'Worker' },
+  { key: 'pastor',      label: 'Pastor' },
+  { key: 'minister',    label: 'Minister' },
+  { key: 'first_timer', label: 'First Timers' },
 ];
 
 const STATUS_COLORS: Record<string, { bg: string; text: string }> = {

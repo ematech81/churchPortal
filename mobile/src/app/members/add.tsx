@@ -14,25 +14,31 @@ import { C } from '../../constants/theme';
 
 const GENDERS = ['Male', 'Female', 'Other'];
 const MARITAL_STATUSES = ['Single', 'Married', 'Divorced', 'Widowed'];
-const MEMBER_STATUSES = ['First Timer', 'New Convert', 'Member', 'Worker', 'Minister', 'Pastor', 'Visitor', 'Backslidden'];
+// Pastor and Minister statuses are set exclusively through the dedicated
+// Pastor registration form (/admin/pastors/add). The general member form
+// must never produce those classifications — they contaminate filter queries.
+const MEMBER_STATUSES = ['First Timer', 'New Convert', 'Member', 'Worker', 'Backslidden'];
 const STATUS_API: Record<string, string> = {
   'First Timer': 'first_timer', 'New Convert': 'new_convert', 'Member': 'member',
-  'Worker': 'worker', 'Minister': 'minister', 'Pastor': 'pastor',
-  'Visitor': 'visitor', 'Backslidden': 'backslidden',
+  'Worker': 'worker', 'Backslidden': 'backslidden',
 };
 const BAPTISM_STATUSES = ['None', 'Water Baptism', 'Holy Spirit', 'Both'];
 const BAPTISM_API: Record<string, string> = { 'None': 'none', 'Water Baptism': 'water', 'Holy Spirit': 'holy_spirit', 'Both': 'both' };
-const MEMBERSHIP_CATEGORIES = ['New Member', 'Existing / Old Member', 'Pastor Registration', 'Youth Member', 'Children Member', 'Family Registration'];
+// 'Pastor Registration' category is intentionally excluded — use the dedicated
+// Pastor registration form (/admin/pastors/add) for that flow.
+const MEMBERSHIP_CATEGORIES = ['New Member', 'Existing / Old Member', 'Youth Member', 'Children Member', 'Family Registration'];
 const CATEGORY_API: Record<string, string> = {
   'New Member': 'new_member', 'Existing / Old Member': 'existing_member',
-  'Pastor Registration': 'pastor_registration',
   'Youth Member': 'youth_member', 'Children Member': 'children_member',
   'Family Registration': 'family_registration',
 };
 const DEPARTMENTS = ['Ushering', 'Choir', 'Media', 'Protocol', 'Children Department', 'Evangelism', 'Technical Unit', 'Prayer Unit', 'Welfare', 'Sanctuary Keepers'];
-const CHURCH_ROLES = ['Branch Pastor', 'Pastor', 'Departmental Leader', 'Worker', 'Member', 'Deacon / Deaconess', 'Elder', 'Other'];
+// Pastoral church roles (pastor / branch_pastor) are excluded from the member
+// form. Assigning those roles is handled exclusively by the Pastor registration
+// flow, which sets the correct status and membershipCategory in one shot.
+const CHURCH_ROLES = ['Departmental Leader', 'Worker', 'Member', 'Deacon / Deaconess', 'Elder', 'Other'];
 const ROLE_API: Record<string, string> = {
-  'Branch Pastor': 'branch_pastor', 'Pastor': 'pastor', 'Departmental Leader': 'departmental_leader',
+  'Departmental Leader': 'departmental_leader',
   'Worker': 'worker', 'Member': 'member', 'Deacon / Deaconess': 'deacon', 'Elder': 'elder', 'Other': 'other',
 };
 const PASTORAL_POSITIONS = ['Youth Pastor', 'Associate Pastor', 'Assistant Pastor', 'Prayer Pastor', 'Evangelism Pastor'];
@@ -478,7 +484,6 @@ export default function AddMemberScreen() {
   const isChildren = category === 'Children Member';
   const isFamily = category === 'Family Registration';
   const isExisting = category === 'Existing / Old Member';
-  const isPastor = churchRole === 'Pastor';
   const isOtherRole = churchRole === 'Other';
   const today = new Date();
 
@@ -696,12 +701,6 @@ export default function AddMemberScreen() {
           <Field label="Church Role">
             <PickerBtn value={churchRole} placeholder="Select role" onPress={() => openPicker('Church Role', CHURCH_ROLES, churchRole, setChurchRole)} />
           </Field>
-
-          {isPastor && (
-            <Field label="Pastoral Position">
-              <PickerBtn value={pastoralPosition} placeholder="Select position" onPress={() => openPicker('Pastoral Position', PASTORAL_POSITIONS, pastoralPosition, setPastoralPosition)} />
-            </Field>
-          )}
 
           {isOtherRole && (
             <Field label="Custom Role / Title">

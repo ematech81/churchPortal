@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +10,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useAuthStore } from '../../stores/auth.store';
+import { getPinSetupSkipped } from '../../utils/pin-session';
+import PinSetupModal from '../../components/pin/PinSetupModal';
 
 const C = {
   dark: '#120D2E',
@@ -21,25 +25,44 @@ const C = {
   textGray: '#8888A0',
 };
 
-const CLUSTERS = [
-  { icon: 'people',       title: 'People &\nMembership', sub: 'Directory, Families, Stats',  route: '/members' },
-  { icon: 'trending-up',  title: 'Follow-up\nEngine',    sub: 'Converts, Workers, Tasks',     route: '/follow-up' },
-  { icon: 'checkbox',     title: 'Attendance',            sub: 'Check-in, Trends, Reports',   route: '/attendance' },
-  { icon: 'home',         title: 'Ministry\nGroups',      sub: 'Cell Groups, Volunteers, Rota', route: null },
-  { icon: 'wallet',       title: 'Finance',               sub: 'Tithes, Giving, Statements',  route: '/finance' },
-  { icon: 'book',         title: 'Spiritual\nHub',        sub: 'Sermons, Prayer, Events',      route: null },
-  { icon: 'chatbubbles',  title: 'Communication',         sub: 'WhatsApp, SMS, Inbox',         route: '/communication' },
-  { icon: 'settings',     title: 'Administration',        sub: 'Dashboard, Branches, Roles',   route: '/admin' },
+const isPastor = (role: string) =>
+  role === 'senior_pastor' || role === 'branch_pastor';
+
+const ALL_CLUSTERS = [
+  { icon: 'people',      title: 'People &\nMembership', sub: 'Directory, Families, Stats',    route: '/members',        pastorOnly: false },
+  { icon: 'trending-up', title: 'Follow-up\nEngine',    sub: 'Converts, Workers, Tasks',       route: '/follow-up',      pastorOnly: false },
+  { icon: 'checkbox',    title: 'Attendance',            sub: 'Check-in, Trends, Reports',      route: '/attendance',     pastorOnly: false },
+  { icon: 'home',        title: 'Ministry\nGroups',      sub: 'Cell Groups, Volunteers, Rota',  route: null,              pastorOnly: false },
+  { icon: 'wallet',      title: 'Finance',               sub: 'Tithes, Giving, Statements',     route: '/finance',        pastorOnly: true  },
+  { icon: 'book',        title: 'Spiritual\nHub',        sub: 'Sermons, Prayer, Events',        route: null,              pastorOnly: false },
+  { icon: 'chatbubbles', title: 'Communication',         sub: 'WhatsApp, SMS, Inbox',            route: '/communication',  pastorOnly: false },
+  { icon: 'settings',    title: 'Administration',        sub: 'Dashboard, Branches, Roles',     route: '/admin',          pastorOnly: true  },
 ];
 
 const ACTIVITY = [
-  { icon: 'play-circle',    title: 'Sermon: Faith for the New Year', sub: 'Accessed 2 hours ago',   iconBg: C.accent,    iconColor: C.dark },
-  { icon: 'person-circle',  title: 'Member: John Doe',               sub: 'Profile edited yesterday', iconBg: C.darkCard, iconColor: C.white },
-  { icon: 'document-text',  title: 'Report: Monthly Cell Growth',    sub: 'Generated 3 days ago',    iconBg: C.accent,    iconColor: C.dark },
+  { icon: 'play-circle',   title: 'Sermon: Faith for the New Year', sub: 'Accessed 2 hours ago',    iconBg: C.accent,    iconColor: C.dark  },
+  { icon: 'person-circle', title: 'Member: John Doe',               sub: 'Profile edited yesterday', iconBg: C.darkCard,  iconColor: C.white },
+  { icon: 'document-text', title: 'Report: Monthly Cell Growth',    sub: 'Generated 3 days ago',    iconBg: C.accent,    iconColor: C.dark  },
 ] as const;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const role = (user?.role ?? '').toLowerCase();
+  const userIsPastor = isPastor(role);
+
+  const clusters = ALL_CLUSTERS.filter((c) => !c.pastorOnly || userIsPastor);
+
+  // Show PIN setup modal for pastors who haven't set a PIN yet and haven't dismissed it this session
+  const [showPinModal, setShowPinModal] = useState(false);
+
+  useEffect(() => {
+    if (userIsPastor && user?.hasPin === false && !getPinSetupSkipped()) {
+      const timer = setTimeout(() => setShowPinModal(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [userIsPastor, user?.hasPin]);
+
   return (
     <View style={{ flex: 1, backgroundColor: C.dark }}>
       <StatusBar barStyle="light-content" backgroundColor={C.dark} />
@@ -96,7 +119,7 @@ export default function HomeScreen() {
         <View style={s.section}>
           <Text style={s.sectionTitle}>Functional Clusters</Text>
           <View style={s.grid}>
-            {CLUSTERS.map((cluster) => (
+            {clusters.map((cluster) => (
               <TouchableOpacity
                 key={cluster.title}
                 style={s.clusterCard}
@@ -130,6 +153,11 @@ export default function HomeScreen() {
           ))}
         </View>
       </ScrollView>
+
+      <PinSetupModal
+        visible={showPinModal}
+        onDismiss={() => setShowPinModal(false)}
+      />
     </View>
   );
 }

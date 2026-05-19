@@ -6,6 +6,8 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { CreatePinDto } from './dto/create-pin.dto';
+import { ResetPinDto } from './dto/reset-pin.dto';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
@@ -136,6 +138,7 @@ export class AuthService {
         phone: user.phone,
         role: user.role,
         churchId: user.churchId,
+        hasPin: user.hasPin,
       },
     };
   }
@@ -200,6 +203,102 @@ export class AuthService {
     await this.usersService.clearOtp(user.id);
     const fresh = await this.usersService.findById(user.id);
     return this.issueTokens(fresh!);
+  }
+
+  // ── PIN management ──────────────────────────────────────────────────────────
+
+  async createPin(userId: string, dto: CreatePinDto) {
+    const user = await this.usersService.findById(userId);
+    if (!user) throw new UnauthorizedException();
+    this._assertPastorRole(user.role);
+
+    if (dto.pin !== dto.confirmPin) {
+      throw new BadRequestException('PINs do not match.');
+    }
+    if (!/^\d{4}$/.test(dto.pin)) {
+      throw new BadRequestException('PIN must be exactly 4 digits.');
+    }
+
+    const pinHash = await bcrypt.hash(dto.pin, 10);
+    await this.usersService.setPin(userId, pinHash);
+    return { success: true, hasPin: true };
+  }
+
+  async verifyPin(userId: string, pin: string) {
+    const user = await this.usersService.findByIdWithPin(userId);
+    if (!user) throw new UnauthorizedException();
+    this._assertPastorRole(user.role);
+
+    if (user.pinLockedUntil && user.pinLockedUntil > new Date()) {
+      const remainingMs = user.pinLockedUntil.getTime() - Date.now();
+      const remainingSec = Math.ceil(remainingMs / 1000);
+      throw new BadRequestException({
+        code: 'PIN_LOCKED',
+        message: 'Too many failed attempts.',
+        lockedUntil: user.pinLockedUntil.toISOString(),
+        remainingSeconds: remainingSec,
+      });
+    }
+
+    if (!user.pinHash) {
+      throw new BadRequestException('No PIN set. Please create a PIN first.');
+    }
+
+    const valid = await bcrypt.compare(pin, user.pinHash);
+    if (!valid) {
+      const attempts = await this.usersService.incrementPinAttempts(userId, user.pinFailedAttempts);
+      if (attempts >= 5) {
+        throw new BadRequestException({
+          code: 'PIN_LOCKED',
+          message: 'Too many failed attempts. PIN locked for 15 minutes.',
+          remainingSeconds: 15 * 60,
+        });
+      }
+      throw new UnauthorizedException({ code: 'PIN_WRONG', message: 'Incorrect PIN.' });
+    }
+
+    await this.usersService.resetPinAttempts(userId);
+    return { success: true };
+  }
+
+  async resetPin(userId: string, dto: ResetPinDto) {
+    const user = await this.usersService.findByIdWithPin(userId);
+    if (!user) throw new UnauthorizedException();
+    this._assertPastorRole(user.role);
+
+    if (dto.newPin !== dto.confirmPin) {
+      throw new BadRequestException('PINs do not match.');
+    }
+    if (!/^\d{4}$/.test(dto.newPin)) {
+      throw new BadRequestException('PIN must be exactly 4 digits.');
+    }
+
+    if (user.role === 'senior_pastor') {
+      const valid = await bcrypt.compare(dto.credential, user.passwordHash);
+      if (!valid) throw new UnauthorizedException('Incorrect password.');
+    } else {
+      // Branch Pastor: credential is OTP code
+      if (!user.otpCode || !user.otpExpiresAt) {
+        throw new BadRequestException('No pending OTP. Please request a new code.');
+      }
+      if (Date.now() > user.otpExpiresAt.getTime()) {
+        throw new BadRequestException('OTP has expired. Please request a new one.');
+      }
+      if (user.otpCode !== dto.credential) {
+        throw new UnauthorizedException('Invalid OTP code.');
+      }
+      await this.usersService.clearOtp(userId);
+    }
+
+    const pinHash = await bcrypt.hash(dto.newPin, 10);
+    await this.usersService.setPin(userId, pinHash);
+    return { success: true, hasPin: true };
+  }
+
+  private _assertPastorRole(role: string) {
+    if (role !== 'senior_pastor' && role !== 'branch_pastor') {
+      throw new ForbiddenException('PIN management is for pastors only.');
+    }
   }
 
   private async _dispatchPhoneOtp(userId: string, phone: string) {

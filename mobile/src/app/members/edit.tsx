@@ -14,11 +14,15 @@ import { C } from '../../constants/theme';
 
 const GENDERS = ['Male', 'Female', 'Other'];
 const MARITAL_STATUSES = ['Single', 'Married', 'Divorced', 'Widowed'];
-const MEMBER_STATUSES = ['First Timer', 'New Convert', 'Member', 'Worker', 'Minister', 'Pastor', 'Visitor', 'Backslidden'];
+// Pastor and Minister are excluded from the general edit form's picker.
+// Records with those statuses display the current value correctly,
+// but the admin cannot re-assign them here — use the Pastor registration flow.
+const MEMBER_STATUSES = ['First Timer', 'New Convert', 'Member', 'Worker', 'Backslidden', 'Visitor'];
 const BAPTISM_STATUSES = ['None', 'Water Baptism', 'Holy Spirit', 'Both'];
 const MEMBERSHIP_CATEGORIES = ['New Member', 'Existing / Old Member', 'Pastor Registration', 'Youth Member', 'Children Member', 'Family Registration'];
 const DEPARTMENTS = ['Ushering', 'Choir', 'Media', 'Protocol', 'Children Department', 'Evangelism', 'Technical Unit', 'Prayer Unit', 'Welfare', 'Sanctuary Keepers'];
-const CHURCH_ROLES = ['Branch Pastor', 'Pastor', 'Departmental Leader', 'Worker', 'Member', 'Deacon / Deaconess', 'Elder', 'Other'];
+// Pastoral church roles excluded — assign those via the Pastor registration flow.
+const CHURCH_ROLES = ['Departmental Leader', 'Worker', 'Member', 'Deacon / Deaconess', 'Elder', 'Other'];
 const PASTORAL_POSITIONS = ['Youth Pastor', 'Associate Pastor', 'Assistant Pastor', 'Prayer Pastor', 'Evangelism Pastor'];
 const AGE_RANGES = ['0–5', '6–12', '13–17'];
 const LANGUAGES = ['English', 'Yoruba', 'Igbo', 'Hausa', 'Pidgin', 'French', 'Other'];
@@ -314,7 +318,7 @@ export default function EditMemberScreen() {
         emergencyContactName: emergencyName || undefined,
         emergencyContactPhone: emergencyPhone || undefined,
         membershipDate: dateJoined ? formatDateApi(dateJoined) : undefined,
-        status: STATUS_API[memberStatus] ?? undefined,
+        status: STATUS_API[memberStatus] ?? 'first_timer',
         baptismStatus: BAPTISM_API[baptismStatus] ?? undefined,
         membershipCategory: CATEGORY_API[category] ?? undefined,
         churchRole: ROLE_API[churchRole] ?? undefined,
