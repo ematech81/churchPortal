@@ -7,7 +7,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../services/api';
+import { useAuthStore } from '../../stores/auth.store';
 import { C } from '../../constants/theme';
+import WorkerNotifyModal, { WorkerResult, MessageTemplates } from '../../components/WorkerNotifyModal';
 
 interface Worker {
   id: string; firstName: string; lastName: string; phone: string;
@@ -26,6 +28,7 @@ function initials(first: string, last: string) {
 
 export default function AssignWorkerScreen() {
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
   const { memberId, memberName, memberStatus, memberPhone } =
     useLocalSearchParams<{ memberId: string; memberName: string; memberStatus: string; memberPhone: string }>();
 
@@ -34,6 +37,11 @@ export default function AssignWorkerScreen() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [assigning, setAssigning] = useState<string | null>(null);
+
+  // Worker notify modal state
+  const [showNotify, setShowNotify] = useState(false);
+  const [notifyWorker, setNotifyWorker] = useState<WorkerResult | null>(null);
+  const [notifyTemplates, setNotifyTemplates] = useState<MessageTemplates | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -82,16 +90,28 @@ export default function AssignWorkerScreen() {
           onPress: async () => {
             setAssigning(worker.id);
             try {
-              await api.post('/follow-up/journeys', {
+              const res = await api.post('/follow-up/journeys', {
                 memberId,
                 decisionType: memberStatus === 'new_convert' ? 'salvation' : 'follow-up',
                 assignedWorkerId: worker.id,
               });
-              Alert.alert(
-                'Assigned!',
-                `${worker.firstName} will follow up with ${memberName}.`,
-                [{ text: 'OK', onPress: () => router.back() }],
-              );
+
+              // Show the notify modal with the worker data returned from the API
+              const workerData = res.data?.worker;
+              const templates  = res.data?.messageTemplates;
+
+              if (workerData) {
+                setNotifyWorker(workerData);
+                setNotifyTemplates(templates ?? null);
+                setShowNotify(true);
+              } else {
+                // Fallback: no code data returned (e.g. worker already had a code and this is a re-assignment)
+                Alert.alert(
+                  'Assigned!',
+                  `${worker.firstName} will follow up with ${memberName}.`,
+                  [{ text: 'OK', onPress: () => router.back() }],
+                );
+              }
             } catch (e: any) {
               const msg = e?.response?.data?.message ?? 'Could not assign worker.';
               Alert.alert('Notice', String(msg));
@@ -103,6 +123,11 @@ export default function AssignWorkerScreen() {
       ],
     );
   }, [memberId, memberName, memberStatus, activeCountMap]);
+
+  const handleNotifyDismiss = useCallback(() => {
+    setShowNotify(false);
+    router.back();
+  }, [router]);
 
   return (
     <View style={{ flex: 1, backgroundColor: C.dark }}>
@@ -224,6 +249,15 @@ export default function AssignWorkerScreen() {
           }
         />
       )}
+
+      {/* Worker notify modal — replaces the old Alert.alert success */}
+      <WorkerNotifyModal
+        visible={showNotify}
+        worker={notifyWorker}
+        memberName={memberName ?? ''}
+        messageTemplates={notifyTemplates}
+        onDismiss={handleNotifyDismiss}
+      />
     </View>
   );
 }

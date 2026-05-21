@@ -1,8 +1,9 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, StatusBar } from 'react-native';
 
 export default function FollowUpScreen() {
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
       <Text style={styles.text}>Follow-up journeys coming soon</Text>
     </View>
   );

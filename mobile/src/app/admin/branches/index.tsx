@@ -48,67 +48,64 @@ function BranchCard({
     : 'Unassigned';
 
   return (
-    <TouchableOpacity style={[d.card, isTop && d.cardTop]} onPress={onPress} activeOpacity={0.88}>
-      {/* Left accent border */}
-      <View style={[d.leftBorder, isTop && d.leftBorderTop]} />
+    <TouchableOpacity style={d.card} onPress={onPress} activeOpacity={0.88}>
+      {/* Type badge */}
+      <View style={[d.typeBadge, isTop && d.typeBadgeTop]}>
+        <Text style={[d.typeBadgeText, isTop && d.typeBadgeTextTop]}>
+          {isTop ? 'MAIN CHURCH' : 'BRANCH'}
+        </Text>
+      </View>
 
-      <View style={d.cardInner}>
-        {/* Header row */}
-        <View style={d.cardHead}>
-          <Text style={d.branchName} numberOfLines={1}>{branch.name}</Text>
-          <View style={[d.typeBadge, isTop && d.typeBadgeTop]}>
-            <Text style={[d.typeBadgeText, isTop && d.typeBadgeTextTop]}>
-              {isTop ? 'MAIN' : 'BRANCH'}
+      {/* Branch name — large, bold, white */}
+      <Text style={d.branchName} numberOfLines={2}>{branch.name}</Text>
+
+      {/* Location */}
+      {(branch.city || branch.address) && (
+        <View style={d.locationRow}>
+          <Ionicons name="location-outline" size={13} color="rgba(255,255,255,0.5)" />
+          <Text style={d.locationText} numberOfLines={1}>
+            {[branch.address, branch.city].filter(Boolean).join(', ')}
+          </Text>
+        </View>
+      )}
+
+      {/* Divider */}
+      <View style={d.divider} />
+
+      {/* Pastor + Members */}
+      <View style={d.statsRow}>
+        <View style={d.statBlock}>
+          <Text style={d.statLabel}>LEAD PASTOR</Text>
+          <View style={d.pastorRow}>
+            <View style={[d.pastorAvatar, !hasPastor && d.pastorAvatarEmpty]}>
+              {hasPastor
+                ? <Text style={d.pastorAvatarText}>{initials(pastorName)}</Text>
+                : <Ionicons name="person-outline" size={14} color="rgba(255,255,255,0.4)" />}
+            </View>
+            <Text style={[d.pastorName, !hasPastor && d.pastorNameEmpty]} numberOfLines={2}>
+              {pastorName}
             </Text>
           </View>
         </View>
 
-        {/* Location */}
-        {(branch.city || branch.address) && (
-          <View style={d.locationRow}>
-            <Ionicons name="location-outline" size={12} color={C.textGray} />
-            <Text style={d.locationText} numberOfLines={1}>
-              {[branch.address, branch.city].filter(Boolean).join(', ')}
-            </Text>
-          </View>
-        )}
+        <View style={d.statDivider} />
 
-        <View style={d.cardDivider} />
-
-        {/* Pastor + Members row */}
-        <View style={d.cardStats}>
-          <View style={d.statBlock}>
-            <Text style={d.statBlockLabel}>LEAD PASTOR</Text>
-            <View style={d.pastorRow}>
-              <View style={[d.pastorAvatar, !hasPastor && d.pastorAvatarEmpty]}>
-                <Text style={d.pastorAvatarText}>
-                  {hasPastor ? initials(pastorName) : '?'}
-                </Text>
-              </View>
-              <Text style={[d.pastorName, !hasPastor && { color: '#F59E0B' }]} numberOfLines={2}>
-                {pastorName}
-              </Text>
-            </View>
-          </View>
-          <View style={d.statDivider} />
-          <View style={d.statBlock}>
-            <Text style={d.statBlockLabel}>TOTAL MEMBERS</Text>
-            <View style={d.memberRow}>
-              <Ionicons name="people" size={16} color={C.dark} />
-              <Text style={d.memberCount}>{branch.memberCount.toLocaleString()}</Text>
-            </View>
+        <View style={d.statBlock}>
+          <Text style={d.statLabel}>MEMBERS</Text>
+          <View style={d.memberRow}>
+            <Ionicons name="people" size={16} color={C.accent} />
+            <Text style={d.memberCount}>{branch.memberCount.toLocaleString()}</Text>
           </View>
         </View>
+      </View>
 
-        {/* Manage button */}
-        <TouchableOpacity style={d.manageBtn} onPress={onManage} activeOpacity={0.8}>
+      {/* CTA buttons */}
+      <View style={d.btnRow}>
+        <TouchableOpacity style={d.manageBtn} onPress={onManage} activeOpacity={0.85}>
           <Text style={d.manageBtnText}>MANAGE BRANCH</Text>
         </TouchableOpacity>
-
-        {/* Delete link */}
-        <TouchableOpacity style={d.deleteRow} onPress={onDelete} activeOpacity={0.7}>
-          <Ionicons name="trash-outline" size={13} color={C.error} />
-          <Text style={d.deleteText}>Delete Branch</Text>
+        <TouchableOpacity style={d.deleteBtn} onPress={onDelete} activeOpacity={0.75}>
+          <Ionicons name="trash-outline" size={16} color="rgba(255,255,255,0.5)" />
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -790,35 +787,49 @@ const s = StyleSheet.create({
 
 // Branch card styles
 const d = StyleSheet.create({
-  card: { backgroundColor: C.white, borderRadius: 16, marginBottom: 14, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2, flexDirection: 'row' },
-  cardTop: { borderWidth: 1.5, borderColor: C.accent },
-  leftBorder: { width: 5, backgroundColor: C.dark },
-  leftBorderTop: { backgroundColor: C.accent },
-  cardInner: { flex: 1, padding: 16 },
-  cardHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6, gap: 8 },
-  branchName: { flex: 1, fontSize: 17, fontWeight: '800', color: C.textDark },
-  typeBadge: { backgroundColor: C.bg, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  typeBadgeTop: { backgroundColor: C.dark },
-  typeBadgeText: { fontSize: 10, fontWeight: '800', color: C.textGray },
-  typeBadgeTextTop: { color: C.accent },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 12 },
-  locationText: { fontSize: 12, color: C.textGray, flex: 1 },
-  cardDivider: { height: 1, backgroundColor: C.bg, marginBottom: 12 },
-  cardStats: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 14 },
+  card: {
+    backgroundColor: C.darkCard, borderRadius: 20, padding: 20, marginBottom: 14,
+    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 12, elevation: 4,
+  },
+  typeBadge: {
+    alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 10,
+  },
+  typeBadgeTop: { backgroundColor: C.accent },
+  typeBadgeText: { fontSize: 9, fontWeight: '800', color: 'rgba(255,255,255,0.7)', letterSpacing: 0.8 },
+  typeBadgeTextTop: { color: C.dark },
+  branchName: {
+    fontSize: 22, fontWeight: '900', color: C.white,
+    lineHeight: 28, marginBottom: 10,
+  },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 16 },
+  locationText: { fontSize: 12, color: 'rgba(255,255,255,0.5)', flex: 1 },
+  divider: { height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginBottom: 16 },
+  statsRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 18 },
   statBlock: { flex: 1 },
-  statBlockLabel: { fontSize: 9, fontWeight: '800', color: C.textGray, letterSpacing: 0.8, marginBottom: 8 },
-  statDivider: { width: 1, backgroundColor: C.border, marginHorizontal: 16, height: 44 },
+  statLabel: { fontSize: 9, fontWeight: '800', color: 'rgba(255,255,255,0.4)', letterSpacing: 0.8, marginBottom: 8 },
+  statDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.1)', marginHorizontal: 16, height: 48 },
   pastorRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  pastorAvatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.dark, alignItems: 'center', justifyContent: 'center' },
-  pastorAvatarEmpty: { backgroundColor: '#FEF9C3' },
+  pastorAvatar: {
+    width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(245,197,24,0.2)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  pastorAvatarEmpty: { backgroundColor: 'rgba(255,255,255,0.06)' },
   pastorAvatarText: { fontSize: 11, fontWeight: '800', color: C.accent },
-  pastorName: { fontSize: 13, fontWeight: '700', color: C.textDark, flex: 1 },
+  pastorName: { fontSize: 13, fontWeight: '700', color: C.white, flex: 1 },
+  pastorNameEmpty: { color: 'rgba(255,255,255,0.35)', fontStyle: 'italic' },
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  memberCount: { fontSize: 20, fontWeight: '800', color: C.textDark },
-  manageBtn: { backgroundColor: C.bg, borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 8 },
-  manageBtnText: { fontSize: 12, fontWeight: '800', color: C.textDark, letterSpacing: 0.8 },
-  deleteRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 4 },
-  deleteText: { fontSize: 11, color: C.error, fontWeight: '600' },
+  memberCount: { fontSize: 22, fontWeight: '900', color: C.white },
+  btnRow: { flexDirection: 'row', gap: 10 },
+  manageBtn: {
+    flex: 1, backgroundColor: C.accent, borderRadius: 12,
+    paddingVertical: 13, alignItems: 'center',
+  },
+  manageBtnText: { fontSize: 13, fontWeight: '800', color: C.dark, letterSpacing: 0.8 },
+  deleteBtn: {
+    width: 46, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
 });
 
 // Modal styles

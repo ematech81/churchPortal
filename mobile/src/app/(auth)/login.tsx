@@ -1,7 +1,7 @@
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView,
-  ActivityIndicator, StatusBar,
+  ActivityIndicator, StatusBar, Alert,
 } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
@@ -157,8 +157,12 @@ function BranchPastorLoginForm() {
     setErrorTitle('');
     setErrorDetail('');
     try {
-      await api.post('/auth/login-pastor', { phone: trimmed });
-      router.push({ pathname: '/(auth)/verify', params: { phone: trimmed, mode: 'pastor' } });
+      const res = await api.post('/auth/login-pastor', { phone: trimmed });
+      const devCode = res.data?.devCode;
+      router.push({
+        pathname: '/(auth)/verify',
+        params: { phone: trimmed, mode: 'pastor', ...(devCode ? { devCode } : {}) },
+      } as any);
     } catch (err: any) {
       const data = err.response?.data;
       // New structured error format
@@ -242,11 +246,128 @@ function BranchPastorLoginForm() {
   );
 }
 
+// ── Worker Login (unique code) ─────────────────────────────────────────────────
+
+function WorkerLoginForm() {
+  const router = useRouter();
+  const setAuth = useAuthStore((s) => s.setAuth);
+  const [code, setCode] = useState('');
+  const [focused, setFocused] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorTitle,  setErrorTitle]  = useState('');
+  const [errorDetail, setErrorDetail] = useState('');
+  const [serverError, setServerError] = useState('');
+
+  const handleLogin = async () => {
+    const trimmed = code.trim();
+    if (!trimmed) { setServerError('Please enter your worker code.'); return; }
+    setLoading(true);
+    setServerError('');
+    setErrorTitle('');
+    setErrorDetail('');
+    try {
+      const res = await api.post('/auth/worker/login', { code: trimmed });
+      const { accessToken, refreshToken, user } = res.data;
+      await setAuth(user, accessToken, refreshToken);
+      router.replace('/worker-portal' as any);
+    } catch (err: any) {
+      const data = err.response?.data;
+      if (data?.message && data?.detail) {
+        setErrorTitle(data.message);
+        setErrorDetail(data.detail);
+      } else {
+        const msg = data?.message;
+        setServerError(Array.isArray(msg) ? msg[0] : (msg ?? 'Invalid code. Please try again.'));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      <View style={s.pastorInfoCard}>
+        <Ionicons name="key-outline" size={18} color={C.accent} />
+        <Text style={s.pastorInfoText}>
+          Use the unique code your pastor gave you when you were assigned a follow-up role.
+        </Text>
+      </View>
+
+      <View style={s.fieldGroup}>
+        <View style={s.fieldLabel}>
+          <Ionicons name="barcode-outline" size={16} color={C.textDark} />
+          <Text style={s.labelText}>Worker Code</Text>
+        </View>
+        <TextInput
+          style={[s.input, focused && s.inputFocused]}
+          placeholder="e.g. emma-01k7p2"
+          placeholderTextColor={C.textGray}
+          autoCapitalize="none"
+          autoCorrect={false}
+          value={code}
+          onChangeText={(t) => { setCode(t); setServerError(''); }}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+        />
+        <Text style={s.codeHint}>Case-insensitive. Copy it exactly as given.</Text>
+      </View>
+
+      {errorTitle ? (
+        <View style={s.accessDeniedBox}>
+          <View style={s.accessDeniedHeader}>
+            <Ionicons name="shield-checkmark" size={20} color={C.error} />
+            <Text style={s.accessDeniedTitle}>{errorTitle}</Text>
+          </View>
+          <Text style={s.accessDeniedDetail}>{errorDetail}</Text>
+        </View>
+      ) : serverError ? (
+        <View style={s.serverError}>
+          <Ionicons name="alert-circle-outline" size={16} color={C.error} />
+          <Text style={s.serverErrorText}>{serverError}</Text>
+        </View>
+      ) : null}
+
+      <TouchableOpacity
+        style={[s.loginBtn, loading && { opacity: 0.7 }]}
+        onPress={handleLogin}
+        activeOpacity={0.85}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color={C.dark} />
+        ) : (
+          <View style={s.loginBtnInner}>
+            <Text style={s.loginBtnText}>ENTER PORTAL</Text>
+            <Ionicons name="arrow-forward-circle-outline" size={20} color={C.dark} />
+          </View>
+        )}
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={s.forgotCodeRow}
+        onPress={() => Alert.alert(
+          'Forgot your code?',
+          'Contact the pastor who assigned you. They can regenerate your code from your worker profile in the Administrative dashboard.',
+          [{ text: 'OK' }]
+        )}
+        activeOpacity={0.7}
+      >
+        <Text style={s.forgotCodeText}>Forgot your code?</Text>
+      </TouchableOpacity>
+
+      <View style={s.accessInfo}>
+        <Ionicons name="information-circle-outline" size={14} color={C.textGray} />
+        <Text style={s.accessInfoText}>Worker access only: your assigned follow-up tasks, visits, and journeys.</Text>
+      </View>
+    </>
+  );
+}
+
 // ── Main Screen ───────────────────────────────────────────────────────────────
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [mode, setMode] = useState<'admin' | 'pastor'>('admin');
+  const [mode, setMode] = useState<'admin' | 'pastor' | 'worker'>('admin');
 
   return (
     <View style={{ flex: 1, backgroundColor: C.dark }}>
@@ -272,21 +393,29 @@ export default function LoginScreen() {
                 onPress={() => setMode('admin')}
                 activeOpacity={0.8}
               >
-                <Ionicons name="person-circle-outline" size={16} color={mode === 'admin' ? C.dark : C.textGray} />
-                <Text style={[s.modeTabText, mode === 'admin' && s.modeTabTextActive]}>Ministry Admin</Text>
+                <Ionicons name="person-circle-outline" size={14} color={mode === 'admin' ? C.dark : C.textGray} />
+                <Text style={[s.modeTabText, mode === 'admin' && s.modeTabTextActive]}>Admin</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[s.modeTab, mode === 'pastor' && s.modeTabActive]}
                 onPress={() => setMode('pastor')}
                 activeOpacity={0.8}
               >
-                <Ionicons name="git-branch-outline" size={16} color={mode === 'pastor' ? C.dark : C.textGray} />
-                <Text style={[s.modeTabText, mode === 'pastor' && s.modeTabTextActive]}>Branch Pastor</Text>
+                <Ionicons name="git-branch-outline" size={14} color={mode === 'pastor' ? C.dark : C.textGray} />
+                <Text style={[s.modeTabText, mode === 'pastor' && s.modeTabTextActive]}>Pastor</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.modeTab, mode === 'worker' && s.modeTabActive]}
+                onPress={() => setMode('worker')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="people-outline" size={14} color={mode === 'worker' ? C.dark : C.textGray} />
+                <Text style={[s.modeTabText, mode === 'worker' && s.modeTabTextActive]}>Worker</Text>
               </TouchableOpacity>
             </View>
 
             {/* Form by mode */}
-            {mode === 'admin' ? <AdminLoginForm /> : <BranchPastorLoginForm />}
+            {mode === 'admin' ? <AdminLoginForm /> : mode === 'pastor' ? <BranchPastorLoginForm /> : <WorkerLoginForm />}
 
             {/* Divider */}
             <View style={s.divider}>
@@ -358,6 +487,11 @@ const s = StyleSheet.create({
   accessDeniedHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   accessDeniedTitle: { fontSize: 16, fontWeight: '800', color: C.error },
   accessDeniedDetail: { fontSize: 14, color: '#7F1D1D', lineHeight: 21 },
+
+  // Worker code field extras
+  codeHint: { fontSize: 11, color: C.textGray, marginTop: 5 },
+  forgotCodeRow: { alignItems: 'center', marginTop: 12, marginBottom: 4 },
+  forgotCodeText: { fontSize: 13, color: C.accent, fontWeight: '700' },
 
   // Login button
   loginBtn: { backgroundColor: C.accent, borderRadius: 14, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', marginTop: 8, shadowColor: C.accent, shadowOpacity: 0.35, shadowRadius: 10, elevation: 4 },

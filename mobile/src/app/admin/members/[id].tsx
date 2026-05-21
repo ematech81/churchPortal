@@ -7,5 +7,5 @@ import MemberProfile from '../../../components/MemberProfile';
 // the role and self-delete checks inside MemberProfile).
 export default function AdminMemberDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  return <MemberProfile memberId={id} adminMode={true} />;
+  return <MemberProfile memberId={id} />;
 }

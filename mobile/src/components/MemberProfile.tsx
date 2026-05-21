@@ -55,8 +55,6 @@ interface MemberDetail {
 
 interface Props {
   memberId: string;
-  /** When true the Remove Member button is shown (subject to role + self checks). */
-  adminMode?: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -161,7 +159,7 @@ function RemoveModal({ member, visible, deleting, deleteError, onConfirm, onCanc
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function MemberProfile({ memberId, adminMode = false }: Props) {
+export default function MemberProfile({ memberId }: Props) {
   const router = useRouter();
   const viewer = useAuthStore((s) => s.user);
 
@@ -210,14 +208,10 @@ export default function MemberProfile({ memberId, adminMode = false }: Props) {
   };
 
   // ── Derive Remove button visibility ───────────────────────────────────────
-  // adminMode: screen is physically under the PIN-gated admin route tree
-  // isPastor: viewer holds a pastoral system role
-  // isSelf: viewer's phone matches member's phone (proxy for same person)
-  // isTargetSeniorPastor: member's churchRole maps to the lead pastor seat
-  const isPastor = PASTOR_ROLES.includes((viewer?.role ?? '').toLowerCase());
-  const isSelf = !!(viewer?.phone && member?.phone && viewer.phone === member.phone);
-  const isTargetSeniorPastor = member?.churchRole === 'senior_pastor';
-  const showRemove = adminMode && isPastor && !isSelf && !isTargetSeniorPastor;
+  // Guard: never show the button before member data is loaded.
+  // Real security is enforced by the backend DELETE endpoint (role + branch scope).
+  const viewerRole = (viewer?.role ?? '').toLowerCase().trim();
+  const showRemove = !!member && viewerRole === 'senior_pastor';
 
   // ── Loading / Error states ─────────────────────────────────────────────────
 

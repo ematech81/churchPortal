@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ZonesScreen() {
   return (
     <SafeAreaView style={s.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F2F2F7" />
       <Text style={s.text}>Zones</Text>
     </SafeAreaView>
   );

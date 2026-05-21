@@ -16,14 +16,21 @@ const RESEND_COOLDOWN = 60;
 
 export default function VerifyScreen() {
   const router = useRouter();
-  const { email, phone, mode } = useLocalSearchParams<{ email?: string; phone?: string; mode?: string }>();
+  const { email, phone, mode, devCode } = useLocalSearchParams<{
+    email?: string; phone?: string; mode?: string; devCode?: string;
+  }>();
   const setAuth = useAuthStore((s) => s.setAuth);
   const setOnboardingDone = useAuthStore((s) => s.setOnboardingDone);
 
   const isPastor = mode === 'pastor';
   const identifier = isPastor ? phone : email;
 
-  const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''));
+  // In dev mode, pre-fill the boxes with the code returned by the API
+  const [digits, setDigits] = useState<string[]>(
+    devCode && devCode.length === OTP_LENGTH
+      ? devCode.split('')
+      : Array(OTP_LENGTH).fill(''),
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [resendCooldown, setResendCooldown] = useState(RESEND_COOLDOWN);
@@ -98,17 +105,23 @@ export default function VerifyScreen() {
   const handleResend = async () => {
     if (resendCooldown > 0) return;
     try {
+      let newDevCode: string | undefined;
       if (isPastor) {
-        await api.post('/auth/resend-pastor-otp', { phone });
+        const res = await api.post('/auth/resend-pastor-otp', { phone });
+        newDevCode = res.data?.devCode;
       } else {
         await api.post('/auth/send-otp', { email });
       }
       setResendCooldown(RESEND_COOLDOWN);
       setTtl(OTP_TTL_SECONDS);
       setExpired(false);
-      setDigits(Array(OTP_LENGTH).fill(''));
       setError('');
-      inputs.current[0]?.focus();
+      if (newDevCode && newDevCode.length === OTP_LENGTH) {
+        setDigits(newDevCode.split(''));
+      } else {
+        setDigits(Array(OTP_LENGTH).fill(''));
+        inputs.current[0]?.focus();
+      }
     } catch (err: any) {
       const msg = err.response?.data?.message;
       setError(Array.isArray(msg) ? msg[0] : 'Could not resend code. Try again.');
@@ -162,6 +175,14 @@ export default function VerifyScreen() {
               {expired ? 'Code expired — request a new one' : `Expires in ${formatTime(ttl)}`}
             </Text>
           </View>
+
+          {/* Dev auto-fill banner */}
+          {!!devCode && (
+            <View style={s.devBanner}>
+              <Ionicons name="construct-outline" size={13} color="#92400E" />
+              <Text style={s.devBannerText}>DEV — code auto-filled: {devCode}</Text>
+            </View>
+          )}
 
           {/* OTP Boxes */}
           <View style={s.otpRow}>
@@ -258,4 +279,10 @@ const s = StyleSheet.create({
   resendLinkDisabled: { color: C.textGray },
   hint: { flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center' },
   hintText: { fontSize: 12, color: C.textGray, textAlign: 'center', flex: 1 },
+  devBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#FEF3C7', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
+    marginBottom: 16, borderWidth: 1, borderColor: '#F59E0B',
+  },
+  devBannerText: { fontSize: 12, fontWeight: '700', color: '#92400E', flex: 1 },
 });

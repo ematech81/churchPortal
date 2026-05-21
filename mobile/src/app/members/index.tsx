@@ -8,6 +8,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '../../services/api';
+import { useAuthStore } from '../../stores/auth.store';
 import { C } from '../../constants/theme';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -230,6 +231,7 @@ function MemberCard({ member, onPress, onMessage }: {
 
 export default function MembersScreen() {
   const router = useRouter();
+  const viewerRole = (useAuthStore((s) => s.user)?.role ?? '').toLowerCase();
   const [members, setMembers] = useState<Member[]>([]);
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
