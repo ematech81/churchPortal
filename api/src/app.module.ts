@@ -20,6 +20,8 @@ import { ServiceEventsModule } from './modules/service-events/service-events.mod
 import { FamiliesModule } from './modules/families/families.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
+import { VisitsModule } from './modules/visits/visits.module';
+import { MinistryGroupsModule } from './modules/ministry-groups/ministry-groups.module';
 import appConfig from './config/app.config';
 import databaseConfig from './config/database.config';
 import redisConfig from './config/redis.config';
@@ -76,6 +78,8 @@ import redisConfig from './config/redis.config';
     CellsModule,
     BillingModule,
     MaintenanceModule,
+    VisitsModule,
+    MinistryGroupsModule,
   ],
   controllers: [AppController],
 })

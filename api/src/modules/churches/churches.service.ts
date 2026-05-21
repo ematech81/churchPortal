@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import * as bcrypt from 'bcryptjs';
 import { Repository } from 'typeorm';
 import { Church } from './church.entity';
 import { Member } from '../members/member.entity';
@@ -203,13 +204,19 @@ export class ChurchesService {
       } as any);
       userId = existing.id;
     } else {
-      // Create a new User account — this enables phone OTP login
+      // Create a new User account — this enables phone OTP login.
+      // Branch Pastors authenticate via phone OTP only, so the passwordHash is
+      // set to a bcrypt hash of a random token they can never know or use.
+      const randomToken = Math.random().toString(36) + Date.now().toString(36);
+      const passwordHash = await bcrypt.hash(randomToken, 12);
+
       const newUser = this.userRepo.create({
-        firstName: member.firstName,
-        lastName:  member.lastName,
-        phone:     member.phone,
-        role:      UserRole.BRANCH_PASTOR,
-        churchId:  branchId,
+        firstName:    member.firstName,
+        lastName:     member.lastName,
+        phone:        member.phone,
+        role:         UserRole.BRANCH_PASTOR,
+        churchId:     branchId,
+        passwordHash,
       } as any);
       if (member.email) (newUser as any).email = member.email;
       (newUser as any).isEmailVerified = true;

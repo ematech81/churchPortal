@@ -55,4 +55,20 @@ export class User extends BaseEntity {
 
   @Column({ type: 'timestamp', nullable: true })
   pinLockedUntil: Date | null;
+
+  // ── Worker login code (FOLLOW_UP_WORKER role only) ─────────────────────────
+  // Stored as SHA-256 hex of the lowercased code — allows O(1) DB lookup.
+  // Plaintext is returned ONLY in the create/regenerate response, never stored.
+  @Index({ unique: true, sparse: true })
+  @Column({ type: 'varchar', nullable: true, select: false })
+  loginCodeHash: string | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  loginCodeUpdatedAt: Date | null;
+
+  @Column({ default: 0 })
+  loginCodeFailedAttempts: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  loginCodeLockedUntil: Date | null;
 }

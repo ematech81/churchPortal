@@ -73,6 +73,12 @@ export class AuthController {
     return this.authService.resendPhoneOtp(body.phone);
   }
 
+  @Post('worker/login')
+  @HttpCode(HttpStatus.OK)
+  workerLogin(@Body() body: { code: string }) {
+    return this.authService.loginWithWorkerCode(body.code);
+  }
+
   @Post('logout')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)

@@ -171,8 +171,13 @@ export class AuthService {
         code: 'NO_BRANCH_ASSIGNED',
       });
     }
-    await this._dispatchPhoneOtp(user.id, phone);
-    return { message: 'A 6-digit verification code has been sent to your phone.', phone };
+    const devCode = await this._dispatchPhoneOtp(user.id, phone);
+    return {
+      message: 'A 6-digit verification code has been sent to your phone.',
+      phone,
+      // devCode is only included outside production — never logged or returned in prod
+      ...(process.env.NODE_ENV !== 'production' && { devCode }),
+    };
   }
 
   async resendPhoneOtp(phone: string) {
@@ -182,8 +187,11 @@ export class AuthService {
     if (user.otpExpiresAt && user.otpExpiresAt.getTime() - Date.now() > 9 * 60 * 1000) {
       throw new BadRequestException('Please wait 60 seconds before requesting a new code.');
     }
-    await this._dispatchPhoneOtp(user.id, phone);
-    return { message: 'A new verification code has been sent.' };
+    const devCode = await this._dispatchPhoneOtp(user.id, phone);
+    return {
+      message: 'A new verification code has been sent.',
+      ...(process.env.NODE_ENV !== 'production' && { devCode }),
+    };
   }
 
   async verifyPhoneOtp(dto: { phone: string; code: string }) {
@@ -295,18 +303,48 @@ export class AuthService {
     return { success: true, hasPin: true };
   }
 
+  // ── Worker code login ────────────────────────────────────────────────────────
+
+  async loginWithWorkerCode(code: string) {
+    const hash = UsersService.hashLoginCode(code);
+    const user = await this.usersService.findByLoginCodeHash(hash);
+
+    if (!user) {
+      throw new UnauthorizedException({
+        message: 'Invalid worker code.',
+        detail: 'Check the code your pastor gave you and try again.',
+        code: 'INVALID_WORKER_CODE',
+      });
+    }
+
+    if (user.loginCodeLockedUntil && user.loginCodeLockedUntil > new Date()) {
+      const remaining = Math.ceil((user.loginCodeLockedUntil.getTime() - Date.now()) / 1000);
+      throw new ForbiddenException({
+        message: 'Too many failed attempts.',
+        detail: `Try again in ${Math.ceil(remaining / 60)} minute(s).`,
+        code: 'CODE_LOCKED',
+        remainingSeconds: remaining,
+      });
+    }
+
+    await this.usersService.resetLoginCodeAttempts(user.id);
+    const fresh = await this.usersService.findById(user.id);
+    return this.issueTokens(fresh!);
+  }
+
   private _assertPastorRole(role: string) {
     if (role !== 'senior_pastor' && role !== 'branch_pastor') {
       throw new ForbiddenException('PIN management is for pastors only.');
     }
   }
 
-  private async _dispatchPhoneOtp(userId: string, phone: string) {
+  private async _dispatchPhoneOtp(userId: string, phone: string): Promise<string> {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     await this.usersService.setOtp(userId, code, expiresAt);
     // TODO: replace with Termii SMS in production
     console.log(`[DEV] Branch Pastor OTP for ${phone}: ${code}`);
+    return code;
   }
 
   private async _dispatchOtp(userId: string, email: string) {

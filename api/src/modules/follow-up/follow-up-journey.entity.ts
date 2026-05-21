@@ -27,4 +27,19 @@ export class FollowUpJourney extends TenantEntity {
 
   @Column({ type: 'timestamp', nullable: true })
   completedAt: Date | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  journeyStage: string | null;
+
+  @Column({ type: 'int', default: 0 })
+  journeyProgress: number;
+
+  @Column({ default: false })
+  urgent: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  dueDate: Date | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  notes: string | null;
 }
